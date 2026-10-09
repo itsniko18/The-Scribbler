@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="0; url=living-script.htm?skip=1#envelope">
+  <title>Redirecting to Living Script...</title>
+  <script>
+    try {
+      sessionStorage.setItem('skipTypewriter', '1');
+    } catch(e){}
+    var search = window.location.search || '?skip=1';
+    var hash = window.location.hash || '#envelope';
+    window.location.replace("living-script.htm" + search + hash);
+  </script>
+</head>
+<body style="background:#111;color:#f3e9e2;font-family:serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+  <p>Entering Living Script...</p>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preview: Traveller Name Entry Popup — Living Script Homepage Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@600;700&family=EB+Garamond:wght@600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="traveller-modal.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      width: 100%;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      /* Exact background from the homepage of living-script.htm */
+      background: 
+        radial-gradient(ellipse at 50% 45%, rgba(175, 140, 80, 0.16) 0%, rgba(46, 34, 25, 0.65) 45%, rgba(21, 18, 15, 0.98) 95%),
+        repeating-linear-gradient(90deg, rgba(20, 16, 13, 0.4) 0px, rgba(42, 32, 24, 0.35) 90px, rgba(24, 19, 15, 0.5) 180px),
+        #15120f;
+      color: #f7ead9;
+      font-family: 'EB Garamond', Georgia, serif;
+      overflow-x: hidden;
+    }
+
+    /* Ambient desk shadow vignette matching living-script.htm */
+    body::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      box-shadow: inset 0 0 180px rgba(8, 6, 5, 0.85);
+      z-index: 1;
+    }
+
+    /* Fine dust / paper grain overlay matching living-script.htm */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.04;
+      background-image: radial-gradient(#D8C9A8 1px, transparent 1px), radial-gradient(#D8C9A8 1px, #15120f 1px);
+      background-size: 5px 5px;
+      background-position: 0 0, 2.5px 2.5px;
+    }
+
+    .preview-header {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .preview-header h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 24px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #e8d7ba;
+      margin-bottom: 6px;
+    }
+
+    .preview-header p {
+      font-family: 'Courier Prime', Courier, monospace;
+      font-size: 13px;
+      color: #9A7B45;
+      letter-spacing: 0.04em;
+    }
+
+    .modal-container {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    /* Override is-hidden for static preview */
+    .modal-container .traveller-modal-card {
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="preview-header">
+    <h1>Living Script — Scriptorium Registry Popup</h1>
+    <p>Rendered directly against the Living Script homepage desk background</p>
+  </header>
+
+  <main class="modal-container">
+    <div class="traveller-modal-card" role="dialog" aria-modal="true" aria-labelledby="travellerModalTitle">
+      <div class="traveller-modal-crest">✒</div>
+      <h2 class="traveller-modal-title" id="travellerModalTitle">Traveller. Enter your name here.</h2>
+      <p class="traveller-modal-sub">
+        Inscribe your name into the Scribbler. Your letters will bind you to your mark across the shared world. Your true name need not be known.
+      </p>
+      
+      <form id="travellerEntryForm" onsubmit="return false;">
+        <div class="traveller-form-group">
+          <input 
+            type="text" 
+            id="travellerNameInput" 
+            class="traveller-input" 
+            autocomplete="name"
+            maxlength="40"
+          />
+        </div>
+
+        <button type="submit" id="travellerSubmitBtn" class="traveller-submit-btn">
+          Enter Scriptorium
+        </button>
+      </form>
+
+      <svg class="traveller-modal-flourish" width="100%" height="16" viewBox="0 0 140 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 8 C35 1 45 15 70 8 C95 1 105 15 130 8" stroke="#8c7355" stroke-width="1.2" stroke-linecap="round" />
+        <circle cx="70" cy="8" r="2.5" fill="#8c7355" />
+        <circle cx="10" cy="9" r="1.5" fill="#8c7355" />
+        <circle cx="130" cy="8" r="1.5" fill="#8c7355" />
+      </svg>
+    </div>
+  </main>
+
+</body>
+</html>
