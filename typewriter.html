@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vintage Typewriter</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Courier+Prime&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#3b0008;--bg2:#260005;--ink:#f3e9e2;--line:#7d2a35;--paper:#f2f2ef;--type:#222;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;width:100vw;height:100vh;height:100dvh;overflow:hidden;background:var(--bg2)}
+body{background:radial-gradient(ellipse at 50% 25%,var(--bg),var(--bg2) 75%);color:var(--ink);font-family:'Newsreader',Georgia,serif;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;overflow:hidden}
+
+.stage{position:relative;width:min(90vw,510px,80vh);max-height:94vh;max-height:94dvh;margin:auto;display:flex;flex-direction:column;align-items:center}
+.pw{width:77%;margin:0 auto -8% auto;aspect-ratio:470/220;overflow:hidden;position:relative;border-radius:2px 2px 0 0;box-shadow:0 -3px 14px rgba(0,0,0,0.22)}
+#paper{position:absolute;left:0;right:0;top:0;min-height:100%;transform:translateY(100%);transition:transform .45s ease-out;background:linear-gradient(90deg,#e9e9e5,var(--paper) 6%,var(--paper) 94%,#e6e6e2);color:var(--type);font-family:'Courier Prime','Courier New',monospace;font-size:var(--fs,15px);line-height:1.65;padding:18px 7% 120px;white-space:pre-wrap;word-break:break-all;outline:none;cursor:text;caret-color:transparent}
+#paper.ph:empty:after{content:"Start typing…";color:#a5a39d}
+.caret{display:inline-block;width:2px;height:1.1em;background:var(--type);vertical-align:text-bottom;animation:b 1s steps(1) infinite}
+@keyframes b{50%{opacity:0}}
+svg{display:block;width:100%;height:auto;position:relative;user-select:none;-webkit-user-select:none}
+.key{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.key .cap{transition:transform .05s ease}
+.key.dn .cap{transform:translateY(3px)}
+#lever{cursor:pointer;transform-origin:62px 20px;transition:transform .18s cubic-bezier(0.2,0.8,0.3,1)}
+#lever.pulled{transform:rotate(-18deg) translateY(-2px)}
+@media (prefers-reduced-motion:reduce){.caret{animation:none}.key .cap{transition:none}#lever{transition:none}}
+
+/* Sound unlock prompt */
+.sound-prompt {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(45, 4, 10, 0.9);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 13.5px;
+  letter-spacing: 0.04em;
+  padding: 7px 18px;
+  border-radius: 20px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 50;
+  cursor: pointer;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sound-prompt:hover {
+  background: rgba(70, 8, 18, 0.98);
+  transform: translateX(-50%) translateY(-1px);
+}
+.sound-prompt.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-8px);
+}
+
+/* Centered Full-Page Sheet Overlay */
+.torn-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(16, 0, 4, 0.74);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.55s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.torn-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.torn-sheet {
+  position: relative;
+  width: min(92vw, 530px);
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
+  background: linear-gradient(135deg, #f7f6f2 0%, #ebe7dc 100%);
+  color: var(--type);
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  font-size: clamp(13.5px, 2.2vw, 15px);
+  line-height: 1.75;
+  padding: clamp(24px, 4vw, 36px) clamp(24px, 5vw, 42px);
+  border-radius: 2px 2px 4px 4px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65), 0 4px 18px rgba(0, 0, 0, 0.4);
+  transform: translateY(28px) scale(0.95);
+  transition: transform 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.15);
+  box-sizing: border-box;
+}
+.torn-overlay.active .torn-sheet {
+  transform: translateY(0) scale(1);
+}
+
+/* Torn/ripped top edge decoration */
+.torn-jagged-edge {
+  position: absolute;
+  top: -6px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background-image: radial-gradient(circle at 7px 8px, transparent 6px, #f5f4ee 6.5px);
+  background-size: 14px 8px;
+  background-repeat: repeat-x;
+  filter: drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.08));
+}
+
+.torn-prose {
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--type);
+  letter-spacing: -0.01em;
+}
+
+.torn-cta-wrapper {
+  margin-top: 28px;
+  text-align: left;
+}
+
+/* CTA styling: authentic paper typography, subtle underline, NO rectangular button */
+.typewriter-cta {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  display: inline-block;
+  color: var(--type);
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  font-size: clamp(14px, 2.3vw, 16px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 5px;
+  text-decoration-color: rgba(34, 34, 34, 0.5);
+  transition: opacity 0.2s ease, text-decoration-color 0.2s ease, transform 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+}
+.typewriter-cta:hover {
+  opacity: 0.68;
+  text-decoration-color: var(--type);
+  transform: translateY(-1.5px);
+}
+.typewriter-cta:active {
+  transform: translateY(0);
+  opacity: 0.9;
+}
+.typewriter-cta:focus-visible {
+  outline: 2px solid #7d2a35;
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+/* Smooth exit transition to existing homepage */
+body.leaving-stage {
+  opacity: 0;
+  transition: opacity 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+body.leaving-stage .torn-sheet {
+  transform: translateY(-24px) scale(0.96);
+  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+}
+</style>
+</head>
+<body>
+<div id="soundPrompt" class="sound-prompt" role="button" tabindex="0" aria-label="Click anywhere for sound">🔊 Click anywhere for sound</div>
+<div class="stage">
+  <div class="pw"><div id="paper" class="ph" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" aria-label="Typewriter paper"></div></div>
+  <svg viewBox="0 0 675 560" aria-hidden="true">
+    <defs>
+      <linearGradient id="bd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6e0f20"/><stop offset=".3" stop-color="#8a1a2d"/><stop offset="1" stop-color="#47060f"/></linearGradient>
+      <linearGradient id="fp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a02a3d"/><stop offset=".15" stop-color="#7c1426"/><stop offset="1" stop-color="#5e0b19"/></linearGradient>
+      <linearGradient id="kc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfaf6"/><stop offset="1" stop-color="#dcdad2"/></linearGradient>
+      <clipPath id="lens"><path d="M186 150 Q270 104 345 104 Q420 104 508 150 Q440 180 345 182 Q250 180 186 150Z"/></clipPath>
+    </defs>
+    <!-- side posts -->
+    <path d="M62 14 Q62 0 78 0 H128 V104 H62Z" fill="#5c0b19"/>
+    <path d="M547 0 H597 Q613 0 613 14 V104 H547Z" fill="#5c0b19" transform="translate(27 0)"/>
+    <rect x="96" y="36" width="36" height="38" fill="#141414"/>
+    <rect x="570" y="36" width="36" height="38" fill="#141414"/>
+    <!-- lever & knob -->
+    <path id="lever" d="M2 100 L62 20" stroke="#8d8d8b" stroke-width="11" stroke-linecap="round"/>
+    <rect x="640" y="58" width="14" height="24" fill="#7a7a78"/>
+    <circle cx="651" cy="70" r="17" fill="#d8d6d0" stroke="#8d8b86" stroke-width="2"/>
+    <!-- roller rod -->
+    <rect x="98" y="51" width="504" height="9" fill="#8c8c8a"/>
+    <line x1="98" y1="55.5" x2="602" y2="55.5" stroke="#333" stroke-width="5" stroke-dasharray="1.6 2.4"/>
+    <rect x="196" y="45" width="27" height="17" rx="2" fill="#141414"/>
+    <rect x="471" y="45" width="27" height="17" rx="2" fill="#141414"/>
+    <!-- body -->
+    <path d="M40 96 H635 Q650 96 652 112 L672 540 Q674 560 655 560 H20 Q1 560 4 540 L24 112 Q26 96 40 96Z" fill="url(#bd)"/>
+    <path d="M24 112 L4 540" stroke="#b34a5c" stroke-opacity=".5" stroke-width="2" fill="none"/>
+    <path d="M652 112 L672 540" stroke="#2a0409" stroke-opacity=".6" stroke-width="3" fill="none"/>
+    <rect x="58" y="190" width="582" height="102" rx="8" fill="url(#fp)"/>
+    <rect x="62" y="193" width="574" height="3" rx="1.5" fill="#d8707f" opacity=".45"/>
+    <rect x="58" y="284" width="582" height="8" fill="#3d060f" opacity=".5"/>
+    <!-- type opening -->
+    <path d="M186 150 Q270 104 345 104 Q420 104 508 150 Q440 180 345 182 Q250 180 186 150Z" fill="#0c0c0c"/>
+    <g clip-path="url(#lens)"><ellipse cx="345" cy="168" rx="105" ry="30" fill="#2a2a2a"/><g id="fan" stroke="#8d8d8b" stroke-width=".9"></g></g>
+    <path d="M186 150 Q270 104 345 104 Q420 104 508 150" stroke="#3a0610" stroke-width="3" fill="none"/>
+    <!-- ribbon spools & vibrator -->
+    <rect x="282" y="96" width="62" height="22" rx="3" fill="#191919"/><rect x="282" y="104" width="62" height="8" fill="#c3281d"/>
+    <rect x="352" y="96" width="62" height="22" rx="3" fill="#191919"/><rect x="352" y="104" width="62" height="8" fill="#c3281d"/>
+    <path d="M322 90 L346 66 L370 90" stroke="#9a9a98" stroke-width="2.4" fill="none"/>
+    <rect x="334" y="86" width="26" height="14" fill="#111"/>
+    <!-- key well -->
+    <rect x="42" y="296" width="612" height="214" rx="10" fill="#0e0e0e"/>
+    <rect x="128" y="488" width="437" height="38" rx="4" fill="#9d9b95" transform="translate(0 3)"/>
+    <rect id="sp" class="key" x="128" y="488" width="437" height="38" rx="4" fill="url(#kc)" stroke="#bdbab0"/>
+    <g id="ks"></g>
+  </svg>
+</div>
+
+<!-- Centered Full-Page Sheet (revealed with tearing sound upon typing completion) -->
+<div id="tornOverlay" class="torn-overlay" aria-hidden="true">
+  <div class="torn-sheet" role="dialog" aria-modal="true" aria-label="Correspondence folio">
+    <div class="torn-jagged-edge" aria-hidden="true"></div>
+    <div class="torn-sheet-inner">
+      <div class="torn-prose">Traveller &mdash; you have received a correspondence from an alternate time, where handwriting used to be a living pulse. Contained within these pages is an interactive writing machine, where words breathe life into ink.</div>
+      <div class="torn-cta-wrapper">
+        <button id="exploreCta" class="typewriter-cta" type="button">Ready to explore?</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+var NS='http://www.w3.org/2000/svg';
+function el(n,a,p){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+// type basket lines
+var fan=document.getElementById('fan');
+for(var i=0;i<46;i++){var a=Math.PI*(0.05+0.9*i/45);el('line',{x1:345,y1:150,x2:345+Math.cos(a)*105,y2:150+Math.sin(a)*34},fan);}
+// keys
+var ks=document.getElementById('ks'),map={},shiftOn=false,shiftKeys=[];
+function mk(x,y,w,lo,hi,kind){
+ var g=el('g',{class:'key',transform:'translate('+x+' '+y+')'},ks);
+ el('rect',{x:-w/2,y:-14,width:w,height:34,rx:6,fill:'#9d9a90'},g);
+ var c=el('g',{class:'cap'},g);
+ el('rect',{x:-w/2,y:-17,width:w,height:34,rx:6,fill:'url(#kc)',stroke:'#bdbab0'},c);
+ var f='font-family:Helvetica,Arial,sans-serif;text-anchor:middle;fill:#333;';
+ if(kind==='arrow'||kind==='shift'){if(lo)el('text',{y:6,style:f+'font-size:17px'},c).textContent=lo;}
+ else if(hi&&!/[a-z]/.test(lo)){el('text',{y:-5,style:f+'font-size:10px'},c).textContent=hi;el('text',{y:11,style:f+'font-size:14px;font-weight:600'},c).textContent=lo;}
+ else el('text',{y:6,style:f+'font-size:16px;font-weight:600'},c).textContent=lo.toUpperCase();
+ g.dataset.lo=lo||'';g.dataset.hi=hi||'';g.dataset.kind=kind||'';
+ if(lo&&!kind){map[lo]=g;}
+ return g;
+}
+var hiMap={};
+function R(y,x0,p,list){list.forEach(function(d,i){var g=mk(x0+p*i,y,36,d[0],d[1]);if(d[1])hiMap[d[1]]=hiMap[d[1]]||g;});}
+R(318,98,44,[['1','!'],['2','"'],['3','#'],['4','$'],['5','%'],['6','^'],['7','&'],['8',"'"],['9','('],['0',')'],['-','_'],['=','+']]);
+mk(72,365,38,'⇥','', 'arrow').dataset.act='tab';
+R(365,118,44.4,'qwertyuiop'.split('').map(function(c){return[c,''];}));
+R(365,562,0,[['[','{']]);
+mk(607,365,42,'⇤','','arrow').dataset.act='bs';
+shiftKeys.push(mk(76,412,50,'','','shift'));
+R(412,125,45,'asdfghjkl'.split('').map(function(c){return[c,''];}));
+R(412,530,45,[[';',':'],["'",'"']]);
+shiftKeys.push(mk(84,458,52,'','','shift'));
+R(458,146,45,'zxcvbnm'.split('').map(function(c){return[c,''];}));
+R(458,463,46,[[',',';'],['.',':'],['/','?']]);
+shiftKeys.push(mk(610,458,52,'','','shift'));
+shiftKeys.forEach(function(k){k.dataset.act='shift';});
+var sp=document.getElementById('sp');sp.dataset.lo=' ';sp.dataset.kind='space';map[' ']=sp;
+// state
+var paper=document.getElementById('paper'),text='',soundOn=true,fs=15,AC=null;
+var caret='<span class="caret"></span>';
+var ctaText='Ready to explore?';
+var isIntroComplete=false;
+var isAutoTyping=true;
+var isTransitioning=false;
+
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function render(){
+ paper.classList.toggle('ph',!text&&document.activeElement!==paper);
+ if(isIntroComplete && text.indexOf(ctaText) !== -1){
+  var idx = text.lastIndexOf(ctaText);
+  var before = text.slice(0, idx);
+  var after = text.slice(idx + ctaText.length);
+  paper.innerHTML = esc(before) + 
+   '<span id="exploreCta" class="typewriter-cta" role="button" tabindex="0" aria-label="Ready to explore? Navigate to homepage">' + 
+   esc(ctaText) + 
+   '</span>' + 
+   esc(after);
+ } else {
+  paper.innerHTML = esc(text) + ((document.activeElement===paper||text)?caret:'');
+ }
+ upd();
+}
+function upd(){
+ var h=paper.parentNode.clientHeight||180,lh=fs*1.65,n=text.split('\n').length-1,p=n+lineLen()/cols();
+ paper.style.transform='translateY('+(h-4-16-lh*(p+1)-30)+'px)';
+}
+window.addEventListener('resize',upd);
+// audio
+var AC = null, masterGain = null, comp = null;
+function ctx(){
+ if(!AC){
+  try{
+   var AudioCtx = window.AudioContext || window.webkitAudioContext;
+   if(AudioCtx){
+    AC = new AudioCtx();
+    comp = AC.createDynamicsCompressor();
+    comp.threshold.setValueAtTime(-18, AC.currentTime);
+    comp.knee.setValueAtTime(8, AC.currentTime);
+    comp.ratio.setValueAtTime(3.5, AC.currentTime);
+    comp.attack.setValueAtTime(0.002, AC.currentTime);
+    comp.release.setValueAtTime(0.12, AC.currentTime);
+    masterGain = AC.createGain();
+    masterGain.gain.setValueAtTime(1.6, AC.currentTime);
+    masterGain.connect(comp);
+    comp.connect(AC.destination);
+   }
+  }catch(e){}
+ }
+ if(AC && AC.state === 'suspended'){
+  AC.resume().catch(function(){});
+ }
+ return AC;
+}
+function noise(t,dur,f,g){
+ var c=ctx();if(!c)return;
+ var now=Math.max(t,c.currentTime);
+ var n=Math.floor(c.sampleRate*dur),b=c.createBuffer(1,n,c.sampleRate),d=b.getChannelData(0);
+ for(var i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.5);
+ var s=c.createBufferSource();s.buffer=b;
+ var fl=c.createBiquadFilter();fl.type='bandpass';fl.frequency.value=f;fl.Q.value=0.9;
+ var gn=c.createGain();gn.gain.setValueAtTime(g,now);
+ s.connect(fl);fl.connect(gn);gn.connect(masterGain||c.destination);s.start(now);
+}
+function tone(t,f,dur,g,ty){
+ var c=ctx();if(!c)return;
+ var now=Math.max(t,c.currentTime);
+ var o=c.createOscillator(),gn=c.createGain();
+ o.type=ty||'sine';o.frequency.value=f;
+ gn.gain.setValueAtTime(Math.max(0.0001,g),now);
+ gn.gain.exponentialRampToValueAtTime(.0001,now+dur);
+ o.connect(gn);gn.connect(masterGain||c.destination);o.start(now);o.stop(now+dur);
+}
+function snd(fn){
+ if(!soundOn)return;
+ var c=ctx();if(!c)return;
+ if(c.state==='suspended'){
+  c.resume().then(function(){fn(c.currentTime);}).catch(function(){});
+ }else{
+  fn(c.currentTime);
+ }
+}
+function clack(){
+ snd(function(t){
+  noise(t,.04,3100+Math.random()*600,1.9);
+  noise(t+.008,.08,460,2.1);
+  tone(t,165,.05,.45,'triangle');
+ });
+}
+function thud(){
+ snd(function(t){
+  noise(t,.07,330,2.2);
+  tone(t,100,.08,.55,'triangle');
+ });
+}
+function ret(){
+ snd(function(t){
+  noise(t,.22,1200,1.1);
+  noise(t+.1,.12,2200,1.0);
+  tone(t+.25,2100,1.1,.15);
+  tone(t+.25,3150,.8,.08);
+ });
+}
+function bell(){
+ snd(function(t){
+  tone(t,2400,1.5,.32);
+  tone(t,3600,1.1,.16);
+ });
+}
+// typing
+function flash(g){if(!g)return;g.classList.add('dn');setTimeout(function(){g.classList.remove('dn')},90);}
+function cols(){return Math.max(12,Math.floor((paper.clientWidth*.86)/(fs*.6)));}
+function lineLen(){return text.length-(text.lastIndexOf('\n')+1);}
+
+var lever=document.getElementById('lever');
+function pullLever(){
+ if(lever){lever.classList.add('pulled');setTimeout(function(){lever.classList.remove('pulled')},220);}
+}
+
+function put(ch){
+ if(ch==='\n'){text+='\n';pullLever();ret();}
+ else if(ch==='\b'){text=text.slice(0,-1);thud();}
+ else{text+=ch;ch===' '?thud():clack();var c=cols(),l=lineLen();if(l===c-6)bell();if(l>=c){text+='\n';pullLever();ret();}}
+ render();
+}
+function setShift(v){shiftOn=v;shiftKeys.forEach(function(k){k.classList.toggle('dn',v);});}
+
+function paperTearSound(){
+ var c=ctx();if(!c)return;
+ var now=c.currentTime,dur=0.62;
+ try{
+  var bufferSize=Math.floor(c.sampleRate*dur);
+  var buffer=c.createBuffer(1,bufferSize,c.sampleRate);
+  var data=buffer.getChannelData(0);
+  for(var i=0;i<bufferSize;i++){
+   var p=i/bufferSize;
+   var ripGrain=(Math.random()*2-1);
+   var ripMod=0.4+0.6*Math.sin(p*320+Math.random()*18);
+   data[i]=ripGrain*ripMod*Math.pow(1-p,1.15);
+  }
+  var noiseSrc=c.createBufferSource();noiseSrc.buffer=buffer;
+  var filter=c.createBiquadFilter();filter.type='bandpass';filter.Q.value=1.8;
+  filter.frequency.setValueAtTime(4200,now);filter.frequency.exponentialRampToValueAtTime(700,now+dur);
+  var hp=c.createBiquadFilter();hp.type='highpass';hp.frequency.value=600;
+  var gainNode=c.createGain();gainNode.gain.setValueAtTime(0.001,now);
+  gainNode.gain.linearRampToValueAtTime(1.8,now+0.04);
+  gainNode.gain.exponentialRampToValueAtTime(0.5,now+0.25);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001,now+dur);
+  noiseSrc.connect(filter);filter.connect(hp);hp.connect(gainNode);gainNode.connect(masterGain||c.destination);
+  noiseSrc.start(now);noiseSrc.stop(now+dur);
+  for(var s=0;s<7;s++){
+   var snapTime=now+0.02+(s*(dur-0.08)/7)+(Math.random()*0.02);
+   noise(snapTime,0.028,2600+Math.random()*1800,0.8);
+  }
+ }catch(e){}
+}
+
+function handleExploreNavigation(){
+ if(isTransitioning) return;
+ isTransitioning = true;
+ thud();
+ try {
+  sessionStorage.setItem('skipTypewriter', '1');
+ }catch(e){}
+ document.body.classList.add('leaving-stage');
+ setTimeout(function(){
+  window.location.href = 'living-script.htm?skip=1#envelope';
+ }, 650);
+}
+
+document.addEventListener('keydown',function(e){
+ if(isAutoTyping)return;
+ if(e.metaKey||e.ctrlKey||e.altKey)return;
+ if(e.target.closest&&e.target.closest('button'))e.target.blur();
+ ctx();
+ var k=e.key;
+ if(k==='Enter'){e.preventDefault();put('\n');return;}
+ if(k==='Backspace'){e.preventDefault();put('\b');return;}
+ if(k==='Tab'){e.preventDefault();flash(ks.querySelector('[data-act=tab]'));put(' ');put(' ');put(' ');put(' ');return;}
+ if(k.length===1){e.preventDefault();flash(map[k.toLowerCase()]||hiMap[k]);put(k);}
+});
+paper.addEventListener('paste',function(e){e.preventDefault();});
+paper.addEventListener('beforeinput',function(e){
+ if(isAutoTyping){e.preventDefault();return;}
+ if(e.inputType==='insertText'&&e.data){
+  e.preventDefault();ctx();flash(map[e.data.toLowerCase()]||hiMap[e.data]);put(e.data);
+ }
+});
+paper.addEventListener('focus',render);paper.addEventListener('blur',render);
+paper.addEventListener('click',function(e){
+ ctx();
+ if(isAutoTyping)return;
+ var r=document.createRange();r.selectNodeContents(paper);r.collapse(false);var s=getSelection();s.removeAllRanges();s.addRange(r);
+});
+
+// Interactive lever click
+if(lever){
+ lever.addEventListener('pointerdown',function(e){
+  e.preventDefault();ctx();if(!isAutoTyping)put('\n');
+ });
+}
+
+document.querySelector('svg').addEventListener('pointerdown',function(e){
+ ctx();
+ if(isAutoTyping)return;
+ if(e.target===lever||e.target.closest&&e.target.closest('#lever')){
+  e.preventDefault();put('\n');return;
+ }
+ var g=e.target.closest('.key');if(!g)return;e.preventDefault();var d=g.dataset;
+ if(d.act==='shift'){setShift(!shiftOn);thud();return;}
+ flash(g);
+ if(d.act==='bs'){put('\b');return;}
+ if(d.act==='tab'){put(' ');put(' ');put(' ');put(' ');return;}
+ var c=d.lo;if(shiftOn){c=d.hi||c.toUpperCase();setShift(false);}
+ put(c);
+});
+
+// Navigation ONLY when clicking the "Ready to explore?" button and nowhere else
+document.addEventListener('click',function(e){
+ var cta = e.target && (e.target.id === 'exploreCta' || (e.target.closest && e.target.closest('#exploreCta')));
+ if(cta){
+  e.preventDefault();
+  e.stopPropagation();
+  handleExploreNavigation();
+ }
+});
+
+document.addEventListener('keydown',function(e){
+ if(e.key === 'Enter' || e.key === ' '){
+  var cta = e.target && (e.target.id === 'exploreCta' || (e.target.closest && e.target.closest('#exploreCta')));
+  if(cta){
+   e.preventDefault();
+   e.stopPropagation();
+   handleExploreNavigation();
+  }
+ }
+});
+
+// Safe control button bindings
+var sndBtn = document.getElementById('snd');
+if(sndBtn){
+ sndBtn.onclick=function(){
+  ctx();soundOn=!soundOn;this.setAttribute('aria-pressed',soundOn);this.textContent=(soundOn?'🔊':'🔈')+' Sound';if(soundOn)clack();
+ };
+}
+var clrBtn = document.getElementById('clr');
+if(clrBtn){
+ clrBtn.onclick=function(){
+  ctx();
+  if(introTimer)clearTimeout(introTimer);
+  isAutoTyping=false;
+  isIntroComplete=false;
+  text='';
+  render();
+  thud();
+ };
+}
+var smBtn = document.getElementById('sm');
+if(smBtn) smBtn.onclick=function(){fs=Math.max(10,fs-1);paper.style.setProperty('--fs',fs+'px');upd();};
+var lgBtn = document.getElementById('lg');
+if(lgBtn) lgBtn.onclick=function(){fs=Math.min(26,fs+1);paper.style.setProperty('--fs',fs+'px');upd();};
+
+var dlb=document.getElementById('dl');
+if(dlb){
+ dlb.onclick=function(){
+  if(!text.trim()){
+   var prev=dlb.textContent;dlb.textContent='Nothing to save';setTimeout(function(){dlb.textContent=prev;},1200);return;
+  }
+  try{
+   var blob=new Blob([text],{type:'text/plain;charset=utf-8'});
+   var url=URL.createObjectURL(blob);
+   var a=document.createElement('a');
+   a.href=url;
+   a.download='typewriter.txt';
+   document.body.appendChild(a);
+   a.click();
+   document.body.removeChild(a);
+   URL.revokeObjectURL(url);
+   bell();
+  }catch(err){
+   var o=dlb.textContent;dlb.textContent='Download error';setTimeout(function(){dlb.textContent=o},1800);
+  }
+ };
+}
+
+// Introduction auto-typing orchestration
+var introText = "Traveller \u2014 you have received a correspondence from an alternate time, where handwriting used to be a living pulse. Contained within these pages is an interactive writing machine, where words breathe life into ink.\n\nReady to explore?";
+
+var introIndex = 0;
+var introTimer = null;
+
+function typeNextChar(){
+ if(introIndex >= introText.length){
+  isAutoTyping = false;
+  isIntroComplete = true;
+  render();
+
+  // Brief pause once writing completes, then play tearing sound and reveal centered folio sheet
+  setTimeout(function(){
+   paperTearSound();
+   paper.style.transition = 'transform 0.42s cubic-bezier(0.2, 0.8, 0.35, 1)';
+   paper.style.transform = 'translateY(-140%)';
+
+   setTimeout(function(){
+    var overlay = document.getElementById('tornOverlay');
+    if(overlay){
+     overlay.classList.add('active');
+     overlay.setAttribute('aria-hidden', 'false');
+     var cta = document.getElementById('exploreCta');
+     if(cta) cta.focus();
+    }
+   }, 260);
+  }, 450);
+  return;
+ }
+ var ch = introText.charAt(introIndex++);
+ var keyEl = map[ch.toLowerCase()] || hiMap[ch];
+ if(ch === ' ') keyEl = sp;
+ if(keyEl) flash(keyEl);
+ put(ch);
+
+ // Crisp, slightly faster vintage typewriter cadence
+ var delay = 60;
+ if(ch === '\n'){
+  delay = 620;
+ } else if(ch === '.' || ch === ';' || ch === '!'){
+  delay = 440;
+ } else if(ch === ','){
+  delay = 260;
+ } else if(ch === '—'){
+  delay = 300;
+ } else if(ch === ' '){
+  delay = 75 + Math.random() * 30;
+ } else {
+  delay = 56 + Math.random() * 32;
+ }
+ introTimer = setTimeout(typeNextChar, delay);
+}
+
+function hideSoundPrompt(){
+ var p = document.getElementById('soundPrompt');
+ if(p) p.classList.add('hidden');
+}
+
+function unlockAudio(){
+ var c = ctx();
+ if(c){
+  if(c.state === 'suspended'){
+   c.resume().then(function(){
+    hideSoundPrompt();
+   }).catch(function(){});
+  } else if(c.state === 'running'){
+   hideSoundPrompt();
+  }
+ }
+}
+
+var promptEl = document.getElementById('soundPrompt');
+if(promptEl){
+ promptEl.addEventListener('click', function(e){
+  e.stopPropagation();
+  unlockAudio();
+  clack();
+ });
+}
+
+['click', 'pointerdown', 'mousedown', 'keydown', 'touchstart'].forEach(function(evt){
+ window.addEventListener(evt, unlockAudio, { passive: true });
+});
+
+// Try to auto-unlock / check state on load
+try{
+ var initCtx = ctx();
+ if(initCtx && initCtx.state === 'running'){
+  hideSoundPrompt();
+ }
+}catch(e){}
+
+// Initial layout & begin intro typing
+setTimeout(function(){
+ render();
+ setTimeout(typeNextChar, 500);
+}, 60);
+})();
+</script>
+</body>
+</html>
