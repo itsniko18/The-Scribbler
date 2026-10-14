@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vintage Typewriter</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Courier+Prime&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#3b0008;--bg2:#260005;--ink:#f3e9e2;--line:#7d2a35;--paper:#f2f2ef;--type:#222;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;width:100vw;height:100vh;height:100dvh;overflow:hidden;background:var(--bg2)}
+body{background:radial-gradient(ellipse at 50% 25%,var(--bg),var(--bg2) 75%);color:var(--ink);font-family:'Newsreader',Georgia,serif;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;overflow:hidden}
+
+.stage{position:relative;width:min(90vw,510px,80vh);max-height:94vh;max-height:94dvh;margin:auto;display:flex;flex-direction:column;align-items:center}
+.pw{width:77%;margin:0 auto -8% auto;aspect-ratio:470/220;overflow:hidden;position:relative;border-radius:2px 2px 0 0;box-shadow:0 -3px 14px rgba(0,0,0,0.22)}
+#paper{position:absolute;left:0;right:0;top:0;min-height:100%;transform:translateY(100%);transition:transform .45s ease-out;background:linear-gradient(90deg,#e9e9e5,var(--paper) 6%,var(--paper) 94%,#e6e6e2);color:var(--type);font-family:'Courier Prime','Courier New',monospace;font-size:var(--fs,15px);line-height:1.65;padding:18px 7% 120px;white-space:pre-wrap;word-break:break-all;outline:none;cursor:text;caret-color:transparent}
+#paper.ph:empty:after{content:"Start typing…";color:#a5a39d}
+.caret{display:inline-block;width:2px;height:1.1em;background:var(--type);vertical-align:text-bottom;animation:b 1s steps(1) infinite}
+@keyframes b{50%{opacity:0}}
+svg{display:block;width:100%;height:auto;position:relative;user-select:none;-webkit-user-select:none}
+.key{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.key .cap{transition:transform .05s ease}
+.key.dn .cap{transform:translateY(3px)}
+#lever{cursor:pointer;transform-origin:58px 24px;transition:transform .18s cubic-bezier(0.2,0.8,0.3,1)}
+#lever.pulled{transform:rotate(-18deg) translateY(-2px)}
+@media (prefers-reduced-motion:reduce){.caret{animation:none}.key .cap{transition:none}#lever{transition:none}}
+
+/* Sound unlock prompt */
+.sound-prompt {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(45, 4, 10, 0.9);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 13.5px;
+  letter-spacing: 0.04em;
+  padding: 7px 18px;
+  border-radius: 20px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 50;
+  cursor: pointer;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sound-prompt:hover {
+  background: rgba(70, 8, 18, 0.98);
+  transform: translateX(-50%) translateY(-1px);
+}
+.sound-prompt.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-8px);
+}
+
+/* Centered Full-Page Sheet Overlay */
+.torn-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(16, 0, 4, 0.74);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.55s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.torn-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.torn-sheet {
+  position: relative;
+  width: min(92vw, 530px);
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
+  background: linear-gradient(135deg, #f7f6f2 0%, #ebe7dc 100%);
+  color: var(--type);
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  font-size: clamp(13.5px, 2.2vw, 15px);
+  line-height: 1.75;
+  padding: clamp(24px, 4vw, 36px) clamp(24px, 5vw, 42px);
+  border-radius: 2px 2px 4px 4px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65), 0 4px 18px rgba(0, 0, 0, 0.4);
+  transform: translateY(28px) scale(0.95);
+  transition: transform 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.15);
+  box-sizing: border-box;
+}
+.torn-overlay.active .torn-sheet {
+  transform: translateY(0) scale(1);
+}
+
+/* Torn/ripped top edge decoration */
+.torn-jagged-edge {
+  position: absolute;
+  top: -6px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background-image: radial-gradient(circle at 7px 8px, transparent 6px, #f5f4ee 6.5px);
+  background-size: 14px 8px;
+  background-repeat: repeat-x;
+  filter: drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.08));
+}
+
+.torn-prose {
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--type);
+  letter-spacing: -0.01em;
+}
+
+.torn-cta-wrapper {
+  margin-top: 28px;
+  text-align: left;
+}
+
+/* CTA styling: authentic paper typography, subtle underline, NO rectangular button */
+.typewriter-cta {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  display: inline-block;
+  color: var(--type);
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  font-size: clamp(14px, 2.3vw, 16px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 5px;
+  text-decoration-color: rgba(34, 34, 34, 0.5);
+  transition: opacity 0.2s ease, text-decoration-color 0.2s ease, transform 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+}
+.typewriter-cta:hover {
+  opacity: 0.68;
+  text-decoration-color: var(--type);
+  transform: translateY(-1.5px);
+}
+.typewriter-cta:active {
+  transform: translateY(0);
+  opacity: 0.9;
+}
+.typewriter-cta:focus-visible {
+  outline: 2px solid #7d2a35;
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+/* Smooth exit transition to existing homepage */
+body.leaving-stage {
+  opacity: 0;
+  transition: opacity 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+body.leaving-stage .torn-sheet {
+  transform: translateY(-24px) scale(0.96);
+  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+}
+</style>
+</head>
+<body>
+<div id="soundPrompt" class="sound-prompt" role="button" tabindex="0" aria-label="Click anywhere for sound">🔊 Click anywhere for sound</div>
+<div class="stage">
+  <div class="pw"><div id="paper" class="ph" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" aria-label="Typewriter paper"></div></div>
+  <svg viewBox="0 0 675 560" aria-hidden="true">
+    <defs>
+      <!-- Glossy Vintage Black Enamel Chassis -->
+      <linearGradient id="bodyPaint" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2c2d33"/>
+        <stop offset="6%" stop-color="#1e2025"/>
+        <stop offset="22%" stop-color="#26282e"/>
+        <stop offset="55%" stop-color="#141518"/>
+        <stop offset="90%" stop-color="#0d0e10"/>
+        <stop offset="100%" stop-color="#08080a"/>
+      </linearGradient>
+      <linearGradient id="bodyHighlight" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#4e515a" stop-opacity="0.7"/>
+        <stop offset="12%" stop-color="#6e727e" stop-opacity="0.9"/>
+        <stop offset="50%" stop-color="#30323a" stop-opacity="0.3"/>
+        <stop offset="88%" stop-color="#6e727e" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="#22242a" stop-opacity="0.6"/>
+      </linearGradient>
+      <!-- Rubber Platen Roller Cylinder -->
+      <linearGradient id="platenRubber" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#131417"/>
+        <stop offset="22%" stop-color="#26282e"/>
+        <stop offset="48%" stop-color="#3a3d46"/>
+        <stop offset="72%" stop-color="#1a1b1f"/>
+        <stop offset="100%" stop-color="#0a0a0c"/>
+      </linearGradient>
+      <!-- Polished Chrome Levers & Metal Rails -->
+      <linearGradient id="chromeMetal" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffffff"/>
+        <stop offset="18%" stop-color="#e0e3e8"/>
+        <stop offset="45%" stop-color="#9da1aa"/>
+        <stop offset="75%" stop-color="#5a5d65"/>
+        <stop offset="100%" stop-color="#b8bcc4"/>
+      </linearGradient>
+      <!-- Circular Chrome Key Rings -->
+      <radialGradient id="chromeBezel" cx="36%" cy="32%" r="68%">
+        <stop offset="0%" stop-color="#ffffff"/>
+        <stop offset="30%" stop-color="#dde0e6"/>
+        <stop offset="65%" stop-color="#80848d"/>
+        <stop offset="90%" stop-color="#44464d"/>
+        <stop offset="100%" stop-color="#9699a2"/>
+      </radialGradient>
+      <!-- Deep Matte Black Key Face -->
+      <radialGradient id="keyDarkFace" cx="44%" cy="40%" r="62%">
+        <stop offset="0%" stop-color="#2a2c32"/>
+        <stop offset="50%" stop-color="#16171a"/>
+        <stop offset="100%" stop-color="#0c0d0f"/>
+      </radialGradient>
+      <!-- Metal DIN 2103 Spool Faces -->
+      <radialGradient id="spoolFace" cx="48%" cy="45%" r="52%">
+        <stop offset="0%" stop-color="#3c3f47"/>
+        <stop offset="55%" stop-color="#202227"/>
+        <stop offset="85%" stop-color="#131417"/>
+        <stop offset="100%" stop-color="#2a2c33"/>
+      </radialGradient>
+      <!-- Semicircular Type Basket Cavity -->
+      <radialGradient id="typeBasketCavity" cx="50%" cy="20%" r="80%">
+        <stop offset="0%" stop-color="#060608"/>
+        <stop offset="60%" stop-color="#121317"/>
+        <stop offset="100%" stop-color="#070709"/>
+      </radialGradient>
+      <!-- Chassis Ambient Drop Shadow -->
+      <filter id="chassisShadow" x="-10%" y="-5%" width="120%" height="125%">
+        <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#000000" flood-opacity="0.65"/>
+      </filter>
+      <clipPath id="basketClip">
+        <path d="M 190 148 Q 260 92 337 92 Q 415 92 485 148 Q 420 282 337 282 Q 255 282 190 148 Z"/>
+      </clipPath>
+    </defs>
+
+    <!-- Top Carriage Shroud / Shield -->
+    <path d="M 72 16 Q 72 6 90 6 H 585 Q 603 6 603 16 V 52 H 72 Z" fill="#18191d" stroke="#2c2e35" stroke-width="1"/>
+    
+    <!-- Left & Right Carriage End Plates -->
+    <rect x="62" y="24" width="22" height="62" rx="3" fill="#1c1d22" stroke="#33363e" stroke-width="1"/>
+    <rect x="591" y="24" width="22" height="62" rx="3" fill="#1c1d22" stroke="#33363e" stroke-width="1"/>
+    <rect x="74" y="36" width="8" height="38" fill="#101114"/>
+    <rect x="593" y="36" width="8" height="38" fill="#101114"/>
+
+    <!-- Left Carriage Return Lever (Curved Chrome Paddle) -->
+    <g id="lever" style="cursor:pointer; transform-origin: 58px 24px;">
+      <path d="M 58 24 C 28 26 14 52 16 95 C 17 114 11 122 3 120" fill="none" stroke="url(#chromeMetal)" stroke-width="7" stroke-linecap="round"/>
+      <rect x="-1" y="104" width="9" height="28" rx="4.5" fill="url(#chromeMetal)" stroke="#555" stroke-width="0.8"/>
+      <circle cx="58" cy="24" r="7" fill="url(#chromeMetal)" stroke="#333" stroke-width="1"/>
+    </g>
+
+    <!-- Right Knurled Platen Knob -->
+    <rect x="615" y="42" width="20" height="30" rx="3" fill="#141518" stroke="#33363e" stroke-width="1"/>
+    <line x1="619" y1="46" x2="619" y2="68" stroke="#2a2d35" stroke-width="1.5"/>
+    <line x1="623" y1="46" x2="623" y2="68" stroke="#2a2d35" stroke-width="1.5"/>
+    <line x1="627" y1="46" x2="627" y2="68" stroke="#2a2d35" stroke-width="1.5"/>
+    <line x1="631" y1="46" x2="631" y2="68" stroke="#2a2d35" stroke-width="1.5"/>
+    <circle cx="637" cy="57" r="15" fill="url(#chromeMetal)" stroke="#555" stroke-width="1"/>
+    <circle cx="637" cy="57" r="6" fill="#141518"/>
+
+    <!-- Rubber Platen Cylinder Roller -->
+    <rect x="84" y="34" width="507" height="44" rx="4" fill="url(#platenRubber)"/>
+    
+    <!-- Chrome Paper Bail Ruler Bar across Platen -->
+    <rect x="84" y="58" width="507" height="7" rx="2" fill="url(#chromeMetal)"/>
+    <line x1="86" y1="61.5" x2="589" y2="61.5" stroke="#282a30" stroke-width="1.2" stroke-dasharray="2 6"/>
+    <!-- Rubber Pinch Rollers on Bail -->
+    <rect x="188" y="53" width="26" height="17" rx="2" fill="#131416" stroke="#444" stroke-width="0.8"/>
+    <rect x="460" y="53" width="26" height="17" rx="2" fill="#131416" stroke="#444" stroke-width="0.8"/>
+
+    <!-- Main Glossy Jet-Black Chassis Body -->
+    <path d="M 44 88 H 631 Q 652 88 654 108 L 671 525 Q 673 552 648 552 H 27 Q 2 552 4 525 L 21 108 Q 23 88 44 88 Z" fill="url(#bodyPaint)" filter="url(#chassisShadow)"/>
+    <!-- Specular Bevel Edge Contour -->
+    <path d="M 44 88 H 631 Q 652 88 654 108 L 671 525 Q 673 552 648 552 H 27 Q 2 552 4 525 L 21 108 Q 23 88 44 88 Z" fill="none" stroke="url(#bodyHighlight)" stroke-width="2.5"/>
+
+    <!-- Upper Deck Housing behind Spools -->
+    <rect x="52" y="88" width="571" height="42" rx="4" fill="#191a1d" stroke="#2c2e35" stroke-width="1"/>
+    <line x1="52" y1="130" x2="623" y2="130" stroke="#0e0f11" stroke-width="2"/>
+
+    <!-- Semicircular Type Basket Cavity -->
+    <path d="M 190 148 Q 260 92 337 92 Q 415 92 485 148 Q 420 282 337 282 Q 255 282 190 148 Z" fill="url(#typeBasketCavity)" stroke="#25272e" stroke-width="2.5"/>
+    <g id="fan" clip-path="url(#basketClip)"></g>
+    <path d="M 190 148 Q 260 92 337 92 Q 415 92 485 148" fill="none" stroke="#363942" stroke-width="2.5"/>
+
+    <!-- Twin Nylon Ribbons (Black Upper, Red Lower) to Center Guide -->
+    <path d="M 198 172 Q 250 146 324 116" stroke="#18191c" stroke-width="4.5" fill="none"/>
+    <path d="M 198 176 Q 250 150 324 120" stroke="#a81f1f" stroke-width="4.5" fill="none"/>
+    <path d="M 476 172 Q 424 146 350 116" stroke="#18191c" stroke-width="4.5" fill="none"/>
+    <path d="M 476 176 Q 424 150 350 120" stroke="#a81f1f" stroke-width="4.5" fill="none"/>
+
+    <!-- Center Steel Type Guide & Ribbon Vibrator -->
+    <path d="M 322 136 L 337 98 L 352 136 Z" fill="none" stroke="url(#chromeMetal)" stroke-width="2.5"/>
+    <rect x="330" y="106" width="14" height="24" fill="#0d0e10" stroke="url(#chromeMetal)" stroke-width="1"/>
+
+    <!-- LEFT RIBBON SPOOL ("DIN 2103") -->
+    <g id="spoolLeft">
+      <circle cx="156" cy="176" r="48" fill="#0d0e10" stroke="#25272d" stroke-width="2"/>
+      <circle cx="156" cy="176" r="45" fill="url(#spoolFace)" stroke="#444750" stroke-width="1.5"/>
+      <circle cx="156" cy="176" r="37" fill="none" stroke="#24262b" stroke-width="1.2"/>
+      <!-- 4 Spool Cutouts -->
+      <circle cx="156" cy="150" r="5" fill="#0c0d0f" stroke="#2d3036" stroke-width="1"/>
+      <circle cx="156" cy="202" r="5" fill="#0c0d0f" stroke="#2d3036" stroke-width="1"/>
+      <circle cx="130" cy="176" r="5" fill="#0c0d0f" stroke="#2d3036" stroke-width="1"/>
+      <circle cx="182" cy="176" r="5" fill="#0c0d0f" stroke="#2d3036" stroke-width="1"/>
+      <!-- Stamped DIN 2103 Text -->
+      <text x="156" y="169" text-anchor="middle" font-family="'Courier Prime', Courier, monospace" font-size="8" font-weight="700" fill="#9da1aa" letter-spacing="1">DIN 2103</text>
+      <!-- Center Chrome Mounting Hub -->
+      <circle cx="156" cy="176" r="9" fill="url(#chromeMetal)" stroke="#333" stroke-width="1"/>
+      <line x1="151" y1="176" x2="161" y2="176" stroke="#222" stroke-width="1.5"/>
+    </g>
+
+    <!-- RIGHT RIBBON SPOOL ("DIN 2103") -->
+    <g id="spoolRight">
+      <circle cx="518" cy="176" r="48" fill="#0d0e10" stroke="#25272d" stroke-width="2"/>
+      <circle cx="518" cy="176" r="45" fill="url(#spoolFace)" stroke="#444750" stroke-width="1.5"/>
+      <circle cx="518" cy="176" r="37" fill="none" stroke="#24262b" stroke-width="1.2"/>
+      <!-- 4 Spool Cutouts -->
+      <circle cx="518" cy="150" r="5" fill="#0c0d0f" stroke="#2d3036" stroke-width="1"/>
+      <circle cx="518" cy="202" r="5" fill="#0c0d0f" stroke="#2d3036" stroke-width="1"/>
+      <circle cx="492" cy="176" r="5" fill="#0c0d0f" stroke="#2d3036" stroke-width="1"/>
+      <circle cx="544" cy="176" r="5" fill="#0c0d0f" stroke="#2d3036" stroke-width="1"/>
+      <!-- Stamped DIN 2103 Text -->
+      <text x="518" y="169" text-anchor="middle" font-family="'Courier Prime', Courier, monospace" font-size="8" font-weight="700" fill="#9da1aa" letter-spacing="1">DIN 2103</text>
+      <!-- Center Chrome Mounting Hub -->
+      <circle cx="518" cy="176" r="9" fill="url(#chromeMetal)" stroke="#333" stroke-width="1"/>
+      <line x1="513" y1="176" x2="523" y2="176" stroke="#222" stroke-width="1.5"/>
+    </g>
+
+    <!-- Recessed Black Keyboard Well -->
+    <rect x="42" y="294" width="591" height="246" rx="14" fill="#0b0b0e" stroke="#222329" stroke-width="2"/>
+    <rect x="44" y="296" width="587" height="4" rx="2" fill="#040405" opacity="0.8"/>
+
+    <!-- Spacebar with Chrome Bezel Trim -->
+    <g id="sp" class="key">
+      <rect x="138" y="490" width="398" height="30" rx="15" fill="#090a0c" transform="translate(0 3)"/>
+      <g class="cap">
+        <rect x="138" y="488" width="398" height="30" rx="15" fill="url(#keyDarkFace)" stroke="url(#chromeBezel)" stroke-width="2.5"/>
+        <rect x="160" y="492" width="354" height="3.5" rx="1.75" fill="#ffffff" opacity="0.22"/>
+      </g>
+    </g>
+    
+    <!-- Dynamic Circular Keys Container -->
+    <g id="ks"></g>
+  </svg>
+</div>
+
+<!-- Centered Full-Page Sheet (revealed with tearing sound upon typing completion) -->
+<div id="tornOverlay" class="torn-overlay" aria-hidden="true">
+  <div class="torn-sheet" role="dialog" aria-modal="true" aria-label="Correspondence folio">
+    <div class="torn-jagged-edge" aria-hidden="true"></div>
+    <div class="torn-sheet-inner">
+      <div class="torn-prose">Traveller &mdash; you have received a correspondence from an alternate time, where handwriting used to be a living pulse. Contained within these pages is an interactive writing machine, where words breathe life into ink.</div>
+      <div class="torn-cta-wrapper">
+        <button id="exploreCta" class="typewriter-cta" type="button">Ready to explore?</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+var NS='http://www.w3.org/2000/svg';
+function el(n,a,p){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+// High-definition radiating steel typebars
+var fan=document.getElementById('fan');
+if(fan){
+  for(var i=0;i<48;i++){
+    var a=Math.PI*(0.04+0.92*i/47);
+    var strokeColor = (i % 2 === 0) ? '#9da1aa' : '#52555e';
+    el('line',{x1:337,y1:115,x2:337+Math.cos(a)*140,y2:115+Math.sin(a)*140,stroke:strokeColor,'stroke-width':1.1},fan);
+  }
+}
+// Classic Circular Chrome-Rimmed Keys
+var ks=document.getElementById('ks'),map={},shiftOn=false,shiftKeys=[];
+function mk(x,y,w,lo,hi,kind){
+ var g=el('g',{class:'key',transform:'translate('+x+' '+y+')'},ks);
+ var isRound = (kind !== 'arrow' && kind !== 'shift');
+ 
+ if(isRound){
+   // Base Stem Shadow
+   el('circle',{cx:0,cy:3,r:18,fill:'#07080a'},g);
+   var c=el('g',{class:'cap'},g);
+   // Outer Chrome Bezel Ring
+   el('circle',{cx:0,cy:0,r:18,fill:'url(#chromeBezel)',stroke:'#383a42','stroke-width':'0.75'},c);
+   // Inner Matte Black Key Face
+   el('circle',{cx:0,cy:0,r:14.5,fill:'url(#keyDarkFace)'},c);
+   // Specular Glass Gleam
+   el('path',{d:'M -8 -8 A 12 12 0 0 1 8 -8 A 12 7 0 0 0 -8 -8 Z',fill:'#ffffff',opacity:'0.16'},c);
+   
+   var f="font-family:'Courier Prime',Courier,monospace;text-anchor:middle;font-weight:700;";
+   if(hi&&!/[a-z]/.test(lo)){
+     el('text',{y:-4,style:f+'font-size:9.5px;fill:#dedad0;'},c).textContent=hi;
+     el('text',{y:10,style:f+'font-size:13.5px;fill:#f5f4ef;'},c).textContent=lo;
+   } else {
+     el('text',{y:5.5,style:f+'font-size:15px;fill:#f5f4ef;'},c).textContent=lo.toUpperCase();
+   }
+ } else {
+   // Wide Rounded Stadium Key (Tab, Shift, Backspace)
+   el('rect',{x:-w/2,y:-12,width:w,height:30,rx:15,fill:'#07080a'},g);
+   var c=el('g',{class:'cap'},g);
+   el('rect',{x:-w/2,y:-15,width:w,height:30,rx:15,fill:'url(#chromeBezel)',stroke:'#383a42','stroke-width':'0.75'},c);
+   el('rect',{x:-w/2+3,y:-12,width:w-6,height:24,rx:12,fill:'url(#keyDarkFace)'},c);
+   el('rect',{x:-w/2+8,y:-10,width:w-16,height:3,rx:1.5,fill:'#ffffff',opacity:'0.18'},c);
+   var f="font-family:'Courier Prime',Courier,monospace;text-anchor:middle;font-weight:700;fill:#f5f4ef;";
+   if(lo) el('text',{y:5,style:f+'font-size:14px;'},c).textContent=lo;
+ }
+
+ g.dataset.lo=lo||'';g.dataset.hi=hi||'';g.dataset.kind=kind||'';
+ if(lo&&!kind){map[lo]=g;}
+ return g;
+}
+var hiMap={};
+function R(y,x0,p,list){list.forEach(function(d,i){var g=mk(x0+p*i,y,36,d[0],d[1]);if(d[1])hiMap[d[1]]=hiMap[d[1]]||g;});}
+R(318,98,44,[['1','!'],['2','"'],['3','#'],['4','$'],['5','%'],['6','^'],['7','&'],['8',"'"],['9','('],['0',')'],['-','_'],['=','+']]);
+mk(72,365,38,'⇥','', 'arrow').dataset.act='tab';
+R(365,118,44.4,'qwertyuiop'.split('').map(function(c){return[c,''];}));
+R(365,562,0,[['[','{']]);
+mk(607,365,42,'⇤','','arrow').dataset.act='bs';
+shiftKeys.push(mk(76,412,50,'','','shift'));
+R(412,125,45,'asdfghjkl'.split('').map(function(c){return[c,''];}));
+R(412,530,45,[[';',':'],["'",'"']]);
+shiftKeys.push(mk(84,458,52,'','','shift'));
+R(458,146,45,'zxcvbnm'.split('').map(function(c){return[c,''];}));
+R(458,463,46,[[',',';'],['.',':'],['/','?']]);
+shiftKeys.push(mk(610,458,52,'','','shift'));
+shiftKeys.forEach(function(k){k.dataset.act='shift';});
+var sp=document.getElementById('sp');sp.dataset.lo=' ';sp.dataset.kind='space';map[' ']=sp;
+// state
+var paper=document.getElementById('paper'),text='',soundOn=true,fs=15,AC=null;
+var caret='<span class="caret"></span>';
+var ctaText='Ready to explore?';
+var isIntroComplete=false;
+var isAutoTyping=true;
+var isTransitioning=false;
+
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function render(){
+ paper.classList.toggle('ph',!text&&document.activeElement!==paper);
+ if(isIntroComplete && text.indexOf(ctaText) !== -1){
+  var idx = text.lastIndexOf(ctaText);
+  var before = text.slice(0, idx);
+  var after = text.slice(idx + ctaText.length);
+  paper.innerHTML = esc(before) + 
+   '<span id="exploreCta" class="typewriter-cta" role="button" tabindex="0" aria-label="Ready to explore? Navigate to homepage">' + 
+   esc(ctaText) + 
+   '</span>' + 
+   esc(after);
+ } else {
+  paper.innerHTML = esc(text) + ((document.activeElement===paper||text)?caret:'');
+ }
+ upd();
+}
+function upd(){
+ var h=paper.parentNode.clientHeight||180,lh=fs*1.65,n=text.split('\n').length-1,p=n+lineLen()/cols();
+ paper.style.transform='translateY('+(h-4-16-lh*(p+1)-30)+'px)';
+}
+window.addEventListener('resize',upd);
+// audio
+var AC = null, masterGain = null, comp = null;
+function ctx(){
+ if(!AC){
+  try{
+   var AudioCtx = window.AudioContext || window.webkitAudioContext;
+   if(AudioCtx){
+    AC = new AudioCtx();
+    comp = AC.createDynamicsCompressor();
+    comp.threshold.setValueAtTime(-18, AC.currentTime);
+    comp.knee.setValueAtTime(8, AC.currentTime);
+    comp.ratio.setValueAtTime(3.5, AC.currentTime);
+    comp.attack.setValueAtTime(0.002, AC.currentTime);
+    comp.release.setValueAtTime(0.12, AC.currentTime);
+    masterGain = AC.createGain();
+    masterGain.gain.setValueAtTime(1.6, AC.currentTime);
+    masterGain.connect(comp);
+    comp.connect(AC.destination);
+   }
+  }catch(e){}
+ }
+ if(AC && AC.state === 'suspended'){
+  AC.resume().catch(function(){});
+ }
+ return AC;
+}
+function noise(t,dur,f,g){
+ var c=ctx();if(!c)return;
+ var now=Math.max(t,c.currentTime);
+ var n=Math.floor(c.sampleRate*dur),b=c.createBuffer(1,n,c.sampleRate),d=b.getChannelData(0);
+ for(var i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.5);
+ var s=c.createBufferSource();s.buffer=b;
+ var fl=c.createBiquadFilter();fl.type='bandpass';fl.frequency.value=f;fl.Q.value=0.9;
+ var gn=c.createGain();gn.gain.setValueAtTime(g,now);
+ s.connect(fl);fl.connect(gn);gn.connect(masterGain||c.destination);s.start(now);
+}
+function tone(t,f,dur,g,ty){
+ var c=ctx();if(!c)return;
+ var now=Math.max(t,c.currentTime);
+ var o=c.createOscillator(),gn=c.createGain();
+ o.type=ty||'sine';o.frequency.value=f;
+ gn.gain.setValueAtTime(Math.max(0.0001,g),now);
+ gn.gain.exponentialRampToValueAtTime(.0001,now+dur);
+ o.connect(gn);gn.connect(masterGain||c.destination);o.start(now);o.stop(now+dur);
+}
+function snd(fn){
+ if(!soundOn)return;
+ var c=ctx();if(!c)return;
+ if(c.state==='suspended'){
+  c.resume().then(function(){fn(c.currentTime);}).catch(function(){});
+ }else{
+  fn(c.currentTime);
+ }
+}
+function clack(){
+ snd(function(t){
+  noise(t,.04,3100+Math.random()*600,1.9);
+  noise(t+.008,.08,460,2.1);
+  tone(t,165,.05,.45,'triangle');
+ });
+}
+function thud(){
+ snd(function(t){
+  noise(t,.07,330,2.2);
+  tone(t,100,.08,.55,'triangle');
+ });
+}
+function ret(){
+ snd(function(t){
+  noise(t,.22,1200,1.1);
+  noise(t+.1,.12,2200,1.0);
+  tone(t+.25,2100,1.1,.15);
+  tone(t+.25,3150,.8,.08);
+ });
+}
+function bell(){
+ snd(function(t){
+  tone(t,2400,1.5,.32);
+  tone(t,3600,1.1,.16);
+ });
+}
+// typing
+function flash(g){if(!g)return;g.classList.add('dn');setTimeout(function(){g.classList.remove('dn')},90);}
+function cols(){return Math.max(12,Math.floor((paper.clientWidth*.86)/(fs*.6)));}
+function lineLen(){return text.length-(text.lastIndexOf('\n')+1);}
+
+var lever=document.getElementById('lever');
+function pullLever(){
+ if(lever){lever.classList.add('pulled');setTimeout(function(){lever.classList.remove('pulled')},220);}
+}
+
+function put(ch){
+ if(ch==='\n'){text+='\n';pullLever();ret();}
+ else if(ch==='\b'){text=text.slice(0,-1);thud();}
+ else{text+=ch;ch===' '?thud():clack();var c=cols(),l=lineLen();if(l===c-6)bell();if(l>=c){text+='\n';pullLever();ret();}}
+ render();
+}
+function setShift(v){shiftOn=v;shiftKeys.forEach(function(k){k.classList.toggle('dn',v);});}
+
+function paperTearSound(){
+ var c=ctx();if(!c)return;
+ var now=c.currentTime,dur=0.62;
+ try{
+  var bufferSize=Math.floor(c.sampleRate*dur);
+  var buffer=c.createBuffer(1,bufferSize,c.sampleRate);
+  var data=buffer.getChannelData(0);
+  for(var i=0;i<bufferSize;i++){
+   var p=i/bufferSize;
+   var ripGrain=(Math.random()*2-1);
+   var ripMod=0.4+0.6*Math.sin(p*320+Math.random()*18);
+   data[i]=ripGrain*ripMod*Math.pow(1-p,1.15);
+  }
+  var noiseSrc=c.createBufferSource();noiseSrc.buffer=buffer;
+  var filter=c.createBiquadFilter();filter.type='bandpass';filter.Q.value=1.8;
+  filter.frequency.setValueAtTime(4200,now);filter.frequency.exponentialRampToValueAtTime(700,now+dur);
+  var hp=c.createBiquadFilter();hp.type='highpass';hp.frequency.value=600;
+  var gainNode=c.createGain();gainNode.gain.setValueAtTime(0.001,now);
+  gainNode.gain.linearRampToValueAtTime(1.8,now+0.04);
+  gainNode.gain.exponentialRampToValueAtTime(0.5,now+0.25);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001,now+dur);
+  noiseSrc.connect(filter);filter.connect(hp);hp.connect(gainNode);gainNode.connect(masterGain||c.destination);
+  noiseSrc.start(now);noiseSrc.stop(now+dur);
+  for(var s=0;s<7;s++){
+   var snapTime=now+0.02+(s*(dur-0.08)/7)+(Math.random()*0.02);
+   noise(snapTime,0.028,2600+Math.random()*1800,0.8);
+  }
+ }catch(e){}
+}
+
+function handleExploreNavigation(){
+ if(isTransitioning) return;
+ isTransitioning = true;
+ thud();
+ try {
+  sessionStorage.setItem('skipTypewriter', '1');
+ }catch(e){}
+ document.body.classList.add('leaving-stage');
+ setTimeout(function(){
+  window.location.href = 'living-script.htm?skip=1#envelope';
+ }, 650);
+}
+
+document.addEventListener('keydown',function(e){
+ if(isAutoTyping)return;
+ if(e.metaKey||e.ctrlKey||e.altKey)return;
+ if(e.target.closest&&e.target.closest('button'))e.target.blur();
+ ctx();
+ var k=e.key;
+ if(k==='Enter'){e.preventDefault();put('\n');return;}
+ if(k==='Backspace'){e.preventDefault();put('\b');return;}
+ if(k==='Tab'){e.preventDefault();flash(ks.querySelector('[data-act=tab]'));put(' ');put(' ');put(' ');put(' ');return;}
+ if(k.length===1){e.preventDefault();flash(map[k.toLowerCase()]||hiMap[k]);put(k);}
+});
+paper.addEventListener('paste',function(e){e.preventDefault();});
+paper.addEventListener('beforeinput',function(e){
+ if(isAutoTyping){e.preventDefault();return;}
+ if(e.inputType==='insertText'&&e.data){
+  e.preventDefault();ctx();flash(map[e.data.toLowerCase()]||hiMap[e.data]);put(e.data);
+ }
+});
+paper.addEventListener('focus',render);paper.addEventListener('blur',render);
+paper.addEventListener('click',function(e){
+ ctx();
+ if(isAutoTyping)return;
+ var r=document.createRange();r.selectNodeContents(paper);r.collapse(false);var s=getSelection();s.removeAllRanges();s.addRange(r);
+});
+
+// Interactive lever click
+if(lever){
+ lever.addEventListener('pointerdown',function(e){
+  e.preventDefault();ctx();if(!isAutoTyping)put('\n');
+ });
+}
+
+document.querySelector('svg').addEventListener('pointerdown',function(e){
+ ctx();
+ if(isAutoTyping)return;
+ if(e.target===lever||e.target.closest&&e.target.closest('#lever')){
+  e.preventDefault();put('\n');return;
+ }
+ var g=e.target.closest('.key');if(!g)return;e.preventDefault();var d=g.dataset;
+ if(d.act==='shift'){setShift(!shiftOn);thud();return;}
+ flash(g);
+ if(d.act==='bs'){put('\b');return;}
+ if(d.act==='tab'){put(' ');put(' ');put(' ');put(' ');return;}
+ var c=d.lo;if(shiftOn){c=d.hi||c.toUpperCase();setShift(false);}
+ put(c);
+});
+
+// Navigation ONLY when clicking the "Ready to explore?" button and nowhere else
+document.addEventListener('click',function(e){
+ var cta = e.target && (e.target.id === 'exploreCta' || (e.target.closest && e.target.closest('#exploreCta')));
+ if(cta){
+  e.preventDefault();
+  e.stopPropagation();
+  handleExploreNavigation();
+ }
+});
+
+document.addEventListener('keydown',function(e){
+ if(e.key === 'Enter' || e.key === ' '){
+  var cta = e.target && (e.target.id === 'exploreCta' || (e.target.closest && e.target.closest('#exploreCta')));
+  if(cta){
+   e.preventDefault();
+   e.stopPropagation();
+   handleExploreNavigation();
+  }
+ }
+});
+
+// Safe control button bindings
+var sndBtn = document.getElementById('snd');
+if(sndBtn){
+ sndBtn.onclick=function(){
+  ctx();soundOn=!soundOn;this.setAttribute('aria-pressed',soundOn);this.textContent=(soundOn?'🔊':'🔈')+' Sound';if(soundOn)clack();
+ };
+}
+var clrBtn = document.getElementById('clr');
+if(clrBtn){
+ clrBtn.onclick=function(){
+  ctx();
+  if(introTimer)clearTimeout(introTimer);
+  isAutoTyping=false;
+  isIntroComplete=false;
+  text='';
+  render();
+  thud();
+ };
+}
+var smBtn = document.getElementById('sm');
+if(smBtn) smBtn.onclick=function(){fs=Math.max(10,fs-1);paper.style.setProperty('--fs',fs+'px');upd();};
+var lgBtn = document.getElementById('lg');
+if(lgBtn) lgBtn.onclick=function(){fs=Math.min(26,fs+1);paper.style.setProperty('--fs',fs+'px');upd();};
+
+var dlb=document.getElementById('dl');
+if(dlb){
+ dlb.onclick=function(){
+  if(!text.trim()){
+   var prev=dlb.textContent;dlb.textContent='Nothing to save';setTimeout(function(){dlb.textContent=prev;},1200);return;
+  }
+  try{
+   var blob=new Blob([text],{type:'text/plain;charset=utf-8'});
+   var url=URL.createObjectURL(blob);
+   var a=document.createElement('a');
+   a.href=url;
+   a.download='typewriter.txt';
+   document.body.appendChild(a);
+   a.click();
+   document.body.removeChild(a);
+   URL.revokeObjectURL(url);
+   bell();
+  }catch(err){
+   var o=dlb.textContent;dlb.textContent='Download error';setTimeout(function(){dlb.textContent=o},1800);
+  }
+ };
+}
+
+// Introduction auto-typing orchestration
+var introText = "Traveller \u2014 you have received a correspondence from an alternate time, where handwriting used to be a living pulse. Contained within these pages is an interactive writing machine, where words breathe life into ink.\n\nReady to explore?";
+
+var introIndex = 0;
+var introTimer = null;
+
+function typeNextChar(){
+ if(introIndex >= introText.length){
+  isAutoTyping = false;
+  isIntroComplete = true;
+  render();
+
+  // Brief pause once writing completes, then play tearing sound and reveal centered folio sheet
+  setTimeout(function(){
+   paperTearSound();
+   paper.style.transition = 'transform 0.42s cubic-bezier(0.2, 0.8, 0.35, 1)';
+   paper.style.transform = 'translateY(-140%)';
+
+   setTimeout(function(){
+    var overlay = document.getElementById('tornOverlay');
+    if(overlay){
+     overlay.classList.add('active');
+     overlay.setAttribute('aria-hidden', 'false');
+     var cta = document.getElementById('exploreCta');
+     if(cta) cta.focus();
+    }
+   }, 260);
+  }, 450);
+  return;
+ }
+ var ch = introText.charAt(introIndex++);
+ var keyEl = map[ch.toLowerCase()] || hiMap[ch];
+ if(ch === ' ') keyEl = sp;
+ if(keyEl) flash(keyEl);
+ put(ch);
+
+ // Crisp, slightly faster vintage typewriter cadence
+ var delay = 60;
+ if(ch === '\n'){
+  delay = 620;
+ } else if(ch === '.' || ch === ';' || ch === '!'){
+  delay = 440;
+ } else if(ch === ','){
+  delay = 260;
+ } else if(ch === '—'){
+  delay = 300;
+ } else if(ch === ' '){
+  delay = 75 + Math.random() * 30;
+ } else {
+  delay = 56 + Math.random() * 32;
+ }
+ introTimer = setTimeout(typeNextChar, delay);
+}
+
+function hideSoundPrompt(){
+ var p = document.getElementById('soundPrompt');
+ if(p) p.classList.add('hidden');
+}
+
+function unlockAudio(){
+ var c = ctx();
+ if(c){
+  if(c.state === 'suspended'){
+   c.resume().then(function(){
+    hideSoundPrompt();
+   }).catch(function(){});
+  } else if(c.state === 'running'){
+   hideSoundPrompt();
+  }
+ }
+}
+
+var promptEl = document.getElementById('soundPrompt');
+if(promptEl){
+ promptEl.addEventListener('click', function(e){
+  e.stopPropagation();
+  unlockAudio();
+  clack();
+ });
+}
+
+['click', 'pointerdown', 'mousedown', 'keydown', 'touchstart'].forEach(function(evt){
+ window.addEventListener(evt, unlockAudio, { passive: true });
+});
+
+// Try to auto-unlock / check state on load
+try{
+ var initCtx = ctx();
+ if(initCtx && initCtx.state === 'running'){
+  hideSoundPrompt();
+ }
+}catch(e){}
+
+// Initial layout & begin intro typing
+setTimeout(function(){
+ render();
+ setTimeout(typeNextChar, 500);
+}, 60);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+# Local environment credentials
+.env
+.env.local
+
+# Large zip archives
+*.zip
+
+# Backup files
+*.bak
+*- Copy.*
+*.tmp
+
+# Local PowerShell utility scripts
+*.ps1
+
+# Temporary download, inspection & build scripts
+dl_slices.js
+gen_download.js
+download_assets.js
+download_figma_images.js
+download_real_gifs.js
+check_gif_dims.js
+check_transforms.js
+find_frame130.js
+lookup_gif_refs.js
+inspect_figma_details.js
+verify_images.js
+verify_original_restored.js
+generate_single_file.js
+download_all.bat
+figma_direct_export.json
+server.js
+
+# Temporary reference photos
+pinterest_typewriter_orig.jpg
+pinterest_typewriter_ref.jpg
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
